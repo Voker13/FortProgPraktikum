@@ -17,14 +17,15 @@ showLine([]).
 showLine([L|Ls]) :- write(L), write("|"), showLine(Ls).
 
 %gibt an ob ein spieler auf dem board gewinnt
-win_board(player(P),board(Rows,integer(W))) :- win_row(player(P),board(Rows,integer(W))). %guckt reihen durch
-win_board(player(P),board(Rows,integer(W))) :- clpfd:transpose(Rows,Cols), win_row(player(P),board(Cols,integer(W))). %guckt spalten durch
-%win_board(player(P),board(Rows,integer(W))) :- 
+win_board(player(P),board(Rows,integer(W))) :- win_row(player(P),Rows,integer(W)). %guckt reihen durch
+win_board(player(P),board(Rows,integer(W))) :- clpfd:transpose(Rows,Cols), win_row(player(P),Cols,integer(W)). %guckt spalten durch
+win_board(player(P),board(Rows,integer(W))) :- all_diag_right(Rows,Diags), win_row(player(P),Diags,integer(W)). %guckt rechte diagonalen durch
+win_board(player(P),board(Rows,integer(W))) :- reflect(Rows,Cols), all_diag_right(Cols,Diags), win_row(player(P),Diags,integer(W)).
 
 %gibt an ob ein spieler in irgendeiner reihe gewinnt
 %(player,board) -> boolean
-win_row(player(P),board([L|_],integer(W))) :- 	allWLists(L,integer(W),El), win_line(player(P),El). %in erser reihe gewonnen
-win_row(player(P),board([_|Ls],integer(W))) :- 	win_row(player(P),board(Ls,integer(W))). %in restlichen reihen gewonnen
+win_row(player(P),[L|_],integer(W)) :- 	allWLists(L,integer(W),El), win_line(player(P),El). %in erser reihe gewonnen
+win_row(player(P),[_|Ls],integer(W)) :- win_row(player(P),Ls,integer(W)). %in restlichen reihen gewonnen
 
 %gibt an ob ein spieler in einer linie gewinnt (MUSS mit allWLists bedient werden!!!) 
 %(player, [[]]) -> boolean
@@ -73,6 +74,15 @@ diag([L|Rows], Pos, E) :- 	E = [Elem|Er],
 							indexOf(L,Elem,Pos),
 							InkPos is Pos +1,
 							diag(Rows,InkPos,Er).
+							
+%refelcting a matrix on the side
+reflect([L],[E]) :- invert_list(L,E).
+reflect([L|Ls], E) :- 	E = [E1|E2],
+						invert_list(L,E1),
+						reflect(Ls,E2).
+	
+invert_list([],[]).
+invert_list([L|Ls],E) :- invert_list(Ls,LsE), append(LsE, [L], E).
 										
 										
 indexOf([Elem|_],Elem,0).
