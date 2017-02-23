@@ -1,13 +1,34 @@
 :- use_module(library(clpfd), []).
 
-empty("∆").
+empty(e).
 player(x).
 player(o).
+
+move(state(player(P),board([L|Ls],W)),Column,state(player(NewPlayer),board(NewBoard,W))) :-  
+													move_possible(L),
+													length(L,Len), 
+													Len > Column,
+													Column >= 0,
+													swap_player(P,NewPlayer),
+													get_current_row([L|Ls],Column,SelectedRow),
+													indexOf([L|Ls],SelectedRow,RowIndex),
+													swap(SelectedRow,P,Column,NewRow),
+													swap([L|Ls],NewRow,RowIndex,NewBoard).
+															
+
+%swap()
+
+get_current_row([L1],Column,E) 	  		:- indexOf(L1,e,Column), write("1"), E = L1 .
+get_current_row([L1,L2|_],Column,E) 	:- indexOf(L1,e,Column), (\+ indexOf(L2,e,Column)), write("2"), E = L1 .
+get_current_row([L1,L2|Ls],Column,E) 	:- indexOf(L1,e,Column), indexOf(L2,e,Column), write("3"), get_current_row([L2|Ls],Column,E).
+
+swap_player(P,NewP) :- P = x, NewP = o.
+swap_player(P,NewP) :- P = o, NewP = x.
 
 empty_board(board([R|[]],_)) :- emptyList(R).
 empty_board(board([R|Rs],_)) :- emptyList(R), empty_board(board(Rs,_)).
 
-emptyList(["∆"]).
+emptyList([e]).
 emptyList([R|Rs]) :- empty(R), emptyList(Rs).
 
 show_board(board([],_)).
@@ -16,12 +37,13 @@ show_board(board([Z|Zs],_)) :- write("|"), showLine(Z), nl, show_board(board(Zs,
 showLine([]).
 showLine([L|Ls]) :- write(L), write("|"), showLine(Ls).
 
-%draw_board(board([L|Ls],W)) :- 	win_board(player(_),board([L|Ls],W)) = false,
-%								move_possible(L) = false.
+draw_board(board([L|Ls],W)) :-  (\+ win_board(player(_),board([L|Ls],W))),
+								(\+ move_possible(L)).
 
 %guckt die erste zeile durch ob noch ein feld frei ist
 %muss mit der ersten zeile aufgerufen werden
-move_possible([L|Ls]) :- empty(L); move_possible([Ls]).
+move_possible([L|_]) :- empty(L).
+move_possible([_|Ls]) :- move_possible(Ls).
 
 %gibt an ob ein spieler auf dem board gewinnt
 win_board(player(P),board(Rows,W)) :- win_row(player(P),Rows,W). %guckt reihen durch
