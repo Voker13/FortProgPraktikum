@@ -1,13 +1,13 @@
 :- use_module(library(clpfd), []).
 
-empty("_").
+empty("∆").
 player(x).
 player(o).
 
 empty_board(board([R|[]],_)) :- emptyList(R).
 empty_board(board([R|Rs],_)) :- emptyList(R), empty_board(board(Rs,_)).
 
-emptyList(["_"]).
+emptyList(["∆"]).
 emptyList([R|Rs]) :- empty(R), emptyList(Rs).
 
 show_board(board([],_)).
@@ -16,7 +16,12 @@ show_board(board([Z|Zs],_)) :- write("|"), showLine(Z), nl, show_board(board(Zs,
 showLine([]).
 showLine([L|Ls]) :- write(L), write("|"), showLine(Ls).
 
-%draw_board(player(P),board(Rows,integer(W)))
+%draw_board(board([L|Ls],W)) :- 	win_board(player(_),board([L|Ls],W)) = false,
+%								move_possible(L) = false.
+
+%guckt die erste zeile durch ob noch ein feld frei ist
+%muss mit der ersten zeile aufgerufen werden
+move_possible([L|Ls]) :- empty(L); move_possible([Ls]).
 
 %gibt an ob ein spieler auf dem board gewinnt
 win_board(player(P),board(Rows,W)) :- win_row(player(P),Rows,W). %guckt reihen durch
