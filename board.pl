@@ -16,7 +16,7 @@ move(state(player(P),board([L|Ls],W)),Column,state(player(NewPlayer),board(NewBo
 													swap([L|Ls],NewRow,RowIndex,NewBoard).
 															
 
-%swap()
+%swap() (list, elem, index, newList) ersetzt das element an 'list'('index') durch 'elem' zur neuen Liste
 
 get_current_row([L1],Column,E) 	  		:- indexOf(L1,e,Column), write("1"), E = L1 .
 get_current_row([L1,L2|_],Column,E) 	:- indexOf(L1,e,Column), (\+ indexOf(L2,e,Column)), write("2"), E = L1 .
