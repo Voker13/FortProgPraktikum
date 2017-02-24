@@ -1,26 +1,94 @@
 :- use_module(library(clpfd), []).
 
-empty(e).
+empty(' ').
 player(x).
 player(o).
+human(x).
+human(o).
 
-move(state(player(P),board([L|Ls],W)),Column,state(player(NewPlayer),board(NewBoard,W))) :-  
+initialize(game(state(player(x),board(NewBoard,W)),Human,Rows,Cols)) :- 	write("Rows:"),read(Rows),
+														write("Cols:"),read(Cols),
+														write("W:"),read(W),
+														write("P:"),read(Human),
+														new_empty_board(Rows,Cols,NewBoard),
+														show_board(board(NewBoard,W)),
+														turn(game(state(player(x),board(NewBoard,W)),Human,Rows,Cols),_).
+
+new_empty_board(_,0,[]) :- !.
+new_empty_board(Rows,Cols,L) :- empty(X), L=[EmptyList|ReEmptyList], new_x_list(Rows,X,EmptyList), DecCols is Cols-1, new_empty_board(Rows,DecCols,ReEmptyList).
+
+new_x_list(0,_,[]) :- !.
+new_x_list(Length,X,L) :- L = [X|L2], DecLength is Length-1, new_x_list(DecLength,X,L2).
+
+move(state(player(P),board([L|Ls],W)),Column,state(player(P),board(NewBoard,W))) :-  
 													move_possible(L),
 													length(L,Len), 
 													Len > Column,
 													Column >= 0,
-													swap_player(P,NewPlayer),
 													get_current_row([L|Ls],Column,SelectedRow),
 													indexOf([L|Ls],SelectedRow,RowIndex),
 													swap(SelectedRow,P,Column,NewRow),
 													swap([L|Ls],NewRow,RowIndex,NewBoard).
-															
 
-%swap() (list, elem, index, newList) ersetzt das element an 'list'('index') durch 'elem' zur neuen Liste
+% humans turn - not won
+turn(game(state(player(P),board(B,W)),Human,Rows,Cols),game(state(player(NewP),NewBoard),Human,Rows,Cols)) :-	    player(P) = player(Human),
+																				show_board(board(B,W)),
+																				write("Next move (0-"),write(Cols),write(")"),
+																				read(Column),
+																				move(state(player(P),board(B,W)),Column,state(player(P),NewBoard)),																		
+																				\+ win_board(player(P),NewBoard),
+																				\+ draw_board(NewBoard),
+																				swap_player(P,NewP),
+																				turn(game(state(player(NewP),NewBoard),Human,Rows,Cols),_).
+	
+% KI turn - not won																			
+turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols),game(state(player(NewP),NewBoard),Human,Rows,Cols)) :-	player(P) \= player(Human),
+																												show_board(board([L|Ls],W)),
+																												dimension(L,0,Dim),
+																												random_member(Column,Dim), 
+																												move(state(player(P),board([L|Ls],W)),Column,state(player(P),NewBoard)),																	
+																												\+ win_board(player(P),NewBoard),
+																												\+ draw_board(NewBoard),
+																												swap_player(P,NewP),
+																												turn(game(state(player(NewP),NewBoard),Human,Rows,Cols),_).
 
-get_current_row([L1],Column,E) 	  		:- indexOf(L1,e,Column), write("1"), E = L1 .
-get_current_row([L1,L2|_],Column,E) 	:- indexOf(L1,e,Column), (\+ indexOf(L2,e,Column)), write("2"), E = L1 .
-get_current_row([L1,L2|Ls],Column,E) 	:- indexOf(L1,e,Column), indexOf(L2,e,Column), write("3"), get_current_row([L2|Ls],Column,E).
+turn(game(state(player(P),board(B,W)),Human,Rows,Cols),game(state(player(_),NewBoard),Human,Rows,Cols)) :-	    player(P) = player(Human),
+																				write("Next move (0-"),write(Cols),write(")"),
+																				read(Column),
+																				move(state(player(P),board(B,W)),Column,state(player(P),NewBoard)),																		
+																				win_board(player(P),NewBoard),
+																				show_board(NewBoard),
+																				write("Human wins!").
+																				
+turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols),game(state(player(_),NewBoard),Human,Rows,Cols)) :-	player(P) \= player(Human),
+																												dimension(L,0,Dim),
+																												random_member(Column,Dim), 
+																												move(state(player(P),board([L|Ls],W)),Column,state(player(P),NewBoard)),																	
+																												win_board(player(P),NewBoard),
+																												show_board(NewBoard),
+																												write("KI wins!").
+
+%draw																				
+turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols),game(state(player(_),NewBoard),Human,Rows,Cols)) :-	dimension(L,0,Dim),
+																												random_member(Column,Dim), 
+																												move(state(player(P),board([L|Ls],W)),Column,state(player(P),NewBoard)),																	
+																												draw_board(NewBoard),
+																												show_board(NewBoard),
+																												write("Draw!").
+
+dimension([],_,[]).
+dimension([L|Ls],X,Lr) :-  \+empty(L), IncX is X+1, dimension(Ls,IncX,Lr).
+dimension([L|Ls],X,Li) :-  empty(L), Li = [X|Lr], IncX is X+1, dimension(Ls,IncX,Lr).
+
+first_n_numbers_rev(0,[0]) :- !.
+first_n_numbers_rev(N,L) :- DecN is N-1, L=[N|Lr], first_n_numbers_rev(DecN,Lr).
+
+swap([_|Ls],Elem,0,[Elem|Ls]).
+swap([L|Ls],Elem,Index,[L|Nl]) :- IndexDec is Index - 1, swap(Ls,Elem,IndexDec,Nl).
+
+get_current_row([L1],Column,E) 	  		:- empty(X), indexOf(L1,X,Column), E = L1 .
+get_current_row([L1,L2|_],Column,E) 	:- empty(X), indexOf(L1,X,Column), (\+ indexOf(L2,X,Column)), E = L1 .
+get_current_row([L1,L2|Ls],Column,E) 	:- empty(X), indexOf(L1,X,Column), indexOf(L2,X,Column), get_current_row([L2|Ls],Column,E).
 
 swap_player(P,NewP) :- P = x, NewP = o.
 swap_player(P,NewP) :- P = o, NewP = x.
@@ -28,7 +96,7 @@ swap_player(P,NewP) :- P = o, NewP = x.
 empty_board(board([R|[]],_)) :- emptyList(R).
 empty_board(board([R|Rs],_)) :- emptyList(R), empty_board(board(Rs,_)).
 
-emptyList([e]).
+emptyList([X]) :- empty(X).
 emptyList([R|Rs]) :- empty(R), emptyList(Rs).
 
 show_board(board([],_)).
@@ -42,8 +110,8 @@ draw_board(board([L|Ls],W)) :-  (\+ win_board(player(_),board([L|Ls],W))),
 
 %guckt die erste zeile durch ob noch ein feld frei ist
 %muss mit der ersten zeile aufgerufen werden
-move_possible([L|_]) :- empty(L).
-move_possible([_|Ls]) :- move_possible(Ls).
+move_possible([L|_]) 	:- empty(L), !.
+move_possible([_|Ls])	:- move_possible(Ls).
 
 %gibt an ob ein spieler auf dem board gewinnt
 win_board(player(P),board(Rows,W)) :- win_row(player(P),Rows,W). %guckt reihen durch
