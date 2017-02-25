@@ -6,13 +6,12 @@ player(o).
 human(x).
 human(o).
 
-initialize(game(state(player(x),board(NewBoard,W)),Human,Rows,Cols)) :- 	write("Rows:"),read(Rows),
-														write("Cols:"),read(Cols),
-														write("W:"),read(W),
-														write("P:"),read(Human),
-														new_empty_board(Rows,Cols,NewBoard),
-														show_board(board(NewBoard,W)),
-														turn(game(state(player(x),board(NewBoard,W)),Human,Rows,Cols),_).
+start() :- 	write("How many Rows the field should have:"),read(Rows),
+			write("How many Columns the field should have:"),read(Cols),
+			write("Streak to Win:"),read(W),
+			write("Choose 'x' or 'o' ('x' starts):"),read(Human),
+			new_empty_board(Rows,Cols,NewBoard),
+			turn(game(state(player(x),board(NewBoard,W)),Human,Rows,Cols)).
 
 new_empty_board(_,0,[]) :- !.
 new_empty_board(Rows,Cols,L) :- empty(X), L=[EmptyList|ReEmptyList], new_x_list(Rows,X,EmptyList), DecCols is Cols-1, new_empty_board(Rows,DecCols,ReEmptyList).
@@ -26,55 +25,59 @@ move(state(player(P),board([L|Ls],W)),Column,state(player(P),board(NewBoard,W)))
 													Len > Column,
 													Column >= 0,
 													get_current_row([L|Ls],Column,SelectedRow),
-													indexOf([L|Ls],SelectedRow,RowIndex),
+													index_of_last([L|Ls],SelectedRow,RowIndex),
 													swap(SelectedRow,P,Column,NewRow),
 													swap([L|Ls],NewRow,RowIndex,NewBoard).
 
+index_of_last(List, Needle, Ret) :- last1(List, Needle, 0, -1, Ret).
+
+last1([L| Ls], Elem, Index, Acc, Ret) :- IncIndex is Index + 1, (L == Elem, !, last1(Ls, Elem, IncIndex, Index, Ret); last1(Ls, Elem, IncIndex, Acc, Ret)).
+last1([], _, _, Acc, Acc).
+
+% no one has won so far...
+evaluation(game(state(player(P),NewBoard),Human,Rows,Cols)) :- 	\+ win_board(player(P),NewBoard), 
+																\+ draw_board(NewBoard), 
+																swap_player(P,NewP),
+																turn(game(state(player(NewP),NewBoard),Human,Rows,Cols)).
+																
+% human has won! 
+evaluation(game(state(player(P),NewBoard),Human,_,_)) :- 	win_board(player(P),NewBoard),
+																player(P) = player(Human),
+																write("Human wins!"),nl,
+																show_board(NewBoard).
+																
+% KI has won! 
+evaluation(game(state(player(P),NewBoard),Human,_,_)) :- 	win_board(player(P),NewBoard),
+																player(P) \= player(Human),
+																write("KI wins!"),nl,
+																show_board(NewBoard).
+																
+% DRAW! 
+evaluation(game(state(player(_),NewBoard),_,_,_)) :- 	draw_board(NewBoard),
+																write("Draw!"),nl,
+																show_board(NewBoard).
+
 % humans turn - not won
-turn(game(state(player(P),board(B,W)),Human,Rows,Cols),game(state(player(NewP),NewBoard),Human,Rows,Cols)) :-	    player(P) = player(Human),
-																				show_board(board(B,W)),
-																				write("Next move (0-"),write(Cols),write(")"),
-																				read(Column),
-																				move(state(player(P),board(B,W)),Column,state(player(P),NewBoard)),																		
-																				\+ win_board(player(P),NewBoard),
-																				\+ draw_board(NewBoard),
-																				swap_player(P,NewP),
-																				turn(game(state(player(NewP),NewBoard),Human,Rows,Cols),_).
+turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols)) :-
+						player(P) = player(Human),
+						dimension(L,0,Dim),
+						write("It's your turn - choose wisely between "),write(Dim),write(")!"),nl,	
+						show_board(board([L|Ls],W)),
+						read(Column),
+						move(state(player(P),board([L|Ls],W)),Column,state(player(P),NewBoard)),																		
+						evaluation(game(state(player(P),NewBoard),Human,Rows,Cols)).
 	
 % KI turn - not won																			
-turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols),game(state(player(NewP),NewBoard),Human,Rows,Cols)) :-	player(P) \= player(Human),
-																												show_board(board([L|Ls],W)),
-																												dimension(L,0,Dim),
-																												random_member(Column,Dim), 
-																												move(state(player(P),board([L|Ls],W)),Column,state(player(P),NewBoard)),																	
-																												\+ win_board(player(P),NewBoard),
-																												\+ draw_board(NewBoard),
-																												swap_player(P,NewP),
-																												turn(game(state(player(NewP),NewBoard),Human,Rows,Cols),_).
+turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols)) :-	
+						player(P) \= player(Human),
+						write("It's KIs turn!"),nl,	
+						show_board(board([L|Ls],W)),
+						dimension(L,0,Dim),
+						random_member(Column,Dim), 
+						write("The KI set in Column "), write(Column), write("."),nl,
+						move(state(player(P),board([L|Ls],W)),Column,state(player(P),NewBoard)),																	
+						evaluation(game(state(player(P),NewBoard),Human,Rows,Cols)).
 
-turn(game(state(player(P),board(B,W)),Human,Rows,Cols),game(state(player(_),NewBoard),Human,Rows,Cols)) :-	    player(P) = player(Human),
-																				write("Next move (0-"),write(Cols),write(")"),
-																				read(Column),
-																				move(state(player(P),board(B,W)),Column,state(player(P),NewBoard)),																		
-																				win_board(player(P),NewBoard),
-																				show_board(NewBoard),
-																				write("Human wins!").
-																				
-turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols),game(state(player(_),NewBoard),Human,Rows,Cols)) :-	player(P) \= player(Human),
-																												dimension(L,0,Dim),
-																												random_member(Column,Dim), 
-																												move(state(player(P),board([L|Ls],W)),Column,state(player(P),NewBoard)),																	
-																												win_board(player(P),NewBoard),
-																												show_board(NewBoard),
-																												write("KI wins!").
-
-%draw																				
-turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols),game(state(player(_),NewBoard),Human,Rows,Cols)) :-	dimension(L,0,Dim),
-																												random_member(Column,Dim), 
-																												move(state(player(P),board([L|Ls],W)),Column,state(player(P),NewBoard)),																	
-																												draw_board(NewBoard),
-																												show_board(NewBoard),
-																												write("Draw!").
 
 dimension([],_,[]).
 dimension([L|Ls],X,Lr) :-  \+empty(L), IncX is X+1, dimension(Ls,IncX,Lr).
