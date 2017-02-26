@@ -10,7 +10,7 @@ start() :- 	write("How many Rows the field should have:"),read(Rows),
 			write("How many Columns the field should have:"),read(Cols),
 			write("Streak to Win:"),read(W),
 			write("Choose 'x' or 'o' ('x' starts):"),read(Human),
-			new_empty_board(Rows,Cols,NewBoard),
+			new_empty_board(Cols,Rows,NewBoard),
 			turn(game(state(player(x),board(NewBoard,W)),Human,Rows,Cols)).
 
 new_empty_board(_,0,[]) :- !.
