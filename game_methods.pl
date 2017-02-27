@@ -1,17 +1,21 @@
+:- module(game_methods,[
+		empty/1,
+		player/1,
+		all_notPlayer_WLists/3,
+		draw_board/1,
+		win_board/2,
+		swap_player/2,
+		show_board/1,
+		dimension/3,
+		move/3,
+		new_empty_board/3
+	]).
+
 :- use_module(library(clpfd), []).
 
 empty(' ').
 player(x).
 player(o).
-human(x).
-human(o).
-
-start() :- 	write("How many Rows the field should have:"),read(Rows),
-			write("How many Columns the field should have:"),read(Cols),
-			write("Streak to Win:"),read(W),
-			write("Choose 'x' or 'o' ('x' starts):"),read(Human),
-			new_empty_board(Cols,Rows,NewBoard),
-			turn(game(state(player(x),board(NewBoard,W)),Human,Rows,Cols)).
 
 new_empty_board(_,0,[]) :- !.
 new_empty_board(Rows,Cols,L) :- empty(X), L=[EmptyList|ReEmptyList], new_x_list(Rows,X,EmptyList), DecCols is Cols-1, new_empty_board(Rows,DecCols,ReEmptyList).
@@ -33,50 +37,6 @@ index_of_last(List, Needle, Ret) :- last1(List, Needle, 0, -1, Ret).
 
 last1([L| Ls], Elem, Index, Acc, Ret) :- IncIndex is Index + 1, (L == Elem, !, last1(Ls, Elem, IncIndex, Index, Ret); last1(Ls, Elem, IncIndex, Acc, Ret)).
 last1([], _, _, Acc, Acc).
-
-% no one has won so far...
-evaluation(game(state(player(P),NewBoard),Human,Rows,Cols)) :- 	\+ win_board(player(P),NewBoard), 
-																\+ draw_board(NewBoard), 
-																swap_player(P,NewP),
-																turn(game(state(player(NewP),NewBoard),Human,Rows,Cols)).
-																
-% human has won! 
-evaluation(game(state(player(P),NewBoard),Human,_,_)) :- 	win_board(player(P),NewBoard),
-																player(P) = player(Human),
-																write("Human wins!"),nl,
-																show_board(NewBoard).
-																
-% KI has won! 
-evaluation(game(state(player(P),NewBoard),Human,_,_)) :- 	win_board(player(P),NewBoard),
-																player(P) \= player(Human),
-																write("KI wins!"),nl,
-																show_board(NewBoard).
-																
-% DRAW! 
-evaluation(game(state(player(_),NewBoard),_,_,_)) :- 	draw_board(NewBoard),
-																write("Draw!"),nl,
-																show_board(NewBoard).
-
-% humans turn - not won
-turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols)) :-
-						player(P) = player(Human),
-						dimension(L,0,Dim),
-						write("It's your turn - choose wisely between "),write(Dim),write(")!"),nl,	
-						show_board(board([L|Ls],W)),
-						read(Column),
-						move(state(player(P),board([L|Ls],W)),Column,state(player(P),NewBoard)),																		
-						evaluation(game(state(player(P),NewBoard),Human,Rows,Cols)).
-	
-% KI turn - not won																			
-turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols)) :-	
-						player(P) \= player(Human),
-						write("It's KIs turn!"),nl,	
-						show_board(board([L|Ls],W)),
-						dimension(L,0,Dim),
-						random_member(Column,Dim), 
-						write("The KI set in Column "), write(Column), write("."),nl,
-						move(state(player(P),board([L|Ls],W)),Column,state(player(P),NewBoard)),																	
-						evaluation(game(state(player(P),NewBoard),Human,Rows,Cols)).
 
 
 dimension([],_,[]).
@@ -101,6 +61,9 @@ empty_board(board([R|Rs],_)) :- emptyList(R), empty_board(board(Rs,_)).
 
 emptyList([X]) :- empty(X).
 emptyList([R|Rs]) :- empty(R), emptyList(Rs).
+
+p_in_list([L|_],player(P)) :- L = P , !.
+p_in_list([_|Ls],player(P)) :- p_in_list(Ls,player(P)).
 
 show_board(board([],_)).
 show_board(board([Z|Zs],_)) :- write("|"), showLine(Z), nl, show_board(board(Zs,_)).
@@ -135,6 +98,35 @@ win_line(player(P),[L|Ls]) :- win_List(player(P),L); win_line(player(P),Ls).
 %(player, []) -> boolean
 win_List(_,[]).
 win_List(player(P),[L|Ls]) :- P = L, win_List(player(P),Ls).
+
+%%
+all_notPlayer_WLists(Board,player(P),Erg) :- 	board_allWLists(Board,L), 
+												filter_notPlayer_lists(L,player(P),Ezwischen), 
+												filter_notEmpty_lists(Ezwischen,Erg).
+
+%%
+filter_notEmpty_lists([_],[]).
+filter_notEmpty_lists([L|Ls],Erg) :- emptyList(L), filter_notEmpty_lists(Ls,Erg), !.
+filter_notEmpty_lists([L|Ls],Erg) :- Erg = [L|Erest], \+ emptyList(L), filter_notEmpty_lists(Ls,Erest).
+
+%%
+filter_notPlayer_lists([_],player(_),[]).
+filter_notPlayer_lists([L|Ls],player(P),Erg) :- p_in_list(L,player(P)), filter_notPlayer_lists(Ls,player(P),Erg), !.
+filter_notPlayer_lists([L|Ls],player(P),Erg) :- Erg = [L|Erest], \+ p_in_list(L,player(P)), filter_notPlayer_lists(Ls,player(P),Erest).
+
+%%
+board_allWLists(board(Rows,W),Erg) :- 	append(E1,E2,Erg),
+										append(E_Rows,E_Cols,E1),
+										rows_allWLists(Rows,W,E_Rows),
+										clpfd:transpose(Rows,Cols), rows_allWLists(Cols,W,E_Cols),
+										append(E_DiagsRight,E_DiagsLeft,E2),
+										all_diag_right(Rows,DiagsRight), rows_allWLists(DiagsRight,W,E_DiagsRight),
+										reflect(Rows,ReflectRows), all_diag_right(ReflectRows,DiagsLeft), rows_allWLists(DiagsLeft,W,E_DiagsLeft), 
+										!.
+
+%%
+rows_allWLists([L],W,Erg) :- allWLists(L,W,Erg).
+rows_allWLists([L|Ls],W,Erg) :- append(E1,E2,Erg), allWLists(L,W,E1), rows_allWLists(Ls,W,E2), !.
 
 %gibt alle Teillisten aus, die W-lang sind, wobei die reihenfolge eingehalten wird( nicht alle Permutationen)
 %([],int) -> [[]]
@@ -176,7 +168,7 @@ diag([L|Rows], Pos, E) :- 	E = [Elem|Er],
 							diag(Rows,InkPos,Er).
 							
 %refelcting a matrix on the side
-reflect([L],[E]) :- invert_list(L,E).
+reflect([L],[E]) :- invert_list(L,E), !.
 reflect([L|Ls], E) :- 	E = [E1|E2],
 						invert_list(L,E1),
 						reflect(Ls,E2).

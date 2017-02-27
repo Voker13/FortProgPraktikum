@@ -1,2 +1,0 @@
-# FortProgPraktikum
-Prolog
