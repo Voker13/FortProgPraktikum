@@ -3,15 +3,19 @@
 		player/1,
 		all_notPlayer_WLists/3,
 		draw_board/1,
-		win_board/2,
+		win_board/1,
 		swap_player/2,
 		show_board/1,
-		dimension/3,
+		domain/3,
 		move/3,
-		new_empty_board/3
+		new_empty_board/3,
+		count_P/3,
+		indexOf/3,
+		lowest_member/3,
+		hightest_member/3
 	]).
 
-:- use_module(library(clpfd), []).
+:- use_module(library(clpfd), []). 
 
 empty(' ').
 player(x).
@@ -39,9 +43,9 @@ last1([L| Ls], Elem, Index, Acc, Ret) :- IncIndex is Index + 1, (L == Elem, !, l
 last1([], _, _, Acc, Acc).
 
 
-dimension([],_,[]).
-dimension([L|Ls],X,Lr) :-  \+empty(L), IncX is X+1, dimension(Ls,IncX,Lr).
-dimension([L|Ls],X,Li) :-  empty(L), Li = [X|Lr], IncX is X+1, dimension(Ls,IncX,Lr).
+domain([],_,[]).
+domain([L|Ls],X,Lr) :-  \+empty(L), IncX is X+1, domain(Ls,IncX,Lr).
+domain([L|Ls],X,Li) :-  empty(L), Li = [X|Lr], IncX is X+1, domain(Ls,IncX,Lr).
 
 first_n_numbers_rev(0,[0]) :- !.
 first_n_numbers_rev(N,L) :- DecN is N-1, L=[N|Lr], first_n_numbers_rev(DecN,Lr).
@@ -62,6 +66,14 @@ empty_board(board([R|Rs],_)) :- emptyList(R), empty_board(board(Rs,_)).
 emptyList([X]) :- empty(X).
 emptyList([R|Rs]) :- empty(R), emptyList(Rs).
 
+%count_P([L],player(P),Erg) :- count_p_in_list(L,player(P),Erg).
+count_P([],player(_),0).
+count_P([L|Ls],player(P),Erg) :- count_p_in_list(L,player(P),CountOfList), count_P(Ls,player(P),Erest), Erg is Erest + CountOfList, !.
+
+count_p_in_list([],player(_),0).
+count_p_in_list([L|Ls],player(P),Erg) :- L = P, count_p_in_list(Ls,player(P),Erest), (Erg is Erest +1), !.
+count_p_in_list([L|Ls],player(P),Erg) :- L \= P, count_p_in_list(Ls,player(P),Erg), !.
+
 p_in_list([L|_],player(P)) :- L = P , !.
 p_in_list([_|Ls],player(P)) :- p_in_list(Ls,player(P)).
 
@@ -71,7 +83,7 @@ show_board(board([Z|Zs],_)) :- write("|"), showLine(Z), nl, show_board(board(Zs,
 showLine([]).
 showLine([L|Ls]) :- write(L), write("|"), showLine(Ls).
 
-draw_board(board([L|Ls],W)) :-  (\+ win_board(player(_),board([L|Ls],W))),
+draw_board(board([L|Ls],W)) :-  (\+ win_board(state(player(_),board([L|Ls],W)))),
 								(\+ move_possible(L)).
 
 %guckt die erste zeile durch ob noch ein feld frei ist
@@ -80,10 +92,10 @@ move_possible([L|_]) 	:- empty(L), !.
 move_possible([_|Ls])	:- move_possible(Ls).
 
 %gibt an ob ein spieler auf dem board gewinnt
-win_board(player(P),board(Rows,W)) :- win_row(player(P),Rows,W). %guckt reihen durch
-win_board(player(P),board(Rows,W)) :- clpfd:transpose(Rows,Cols), win_row(player(P),Cols,W). %guckt spalten durch
-win_board(player(P),board(Rows,W)) :- all_diag_right(Rows,Diags), win_row(player(P),Diags,W). %guckt rechte diagonalen durch
-win_board(player(P),board(Rows,W)) :- reflect(Rows,Cols), all_diag_right(Cols,Diags), win_row(player(P),Diags,W).
+win_board(state(player(P),board(Rows,W))) :- win_row(player(P),Rows,W). %guckt reihen durch
+win_board(state(player(P),board(Rows,W))) :- clpfd:transpose(Rows,Cols), win_row(player(P),Cols,W). %guckt spalten durch
+win_board(state(player(P),board(Rows,W))) :- all_diag_right(Rows,Diags), win_row(player(P),Diags,W). %guckt rechte diagonalen durch
+win_board(state(player(P),board(Rows,W))) :- reflect(Rows,Cols), all_diag_right(Cols,Diags), win_row(player(P),Diags,W).
 
 %gibt an ob ein spieler in irgendeiner reihe gewinnt
 %(player,board) -> boolean
@@ -101,16 +113,16 @@ win_List(player(P),[L|Ls]) :- P = L, win_List(player(P),Ls).
 
 %%
 all_notPlayer_WLists(Board,player(P),Erg) :- 	board_allWLists(Board,L), 
-												filter_notPlayer_lists(L,player(P),Ezwischen), 
-												filter_notEmpty_lists(Ezwischen,Erg).
+												filter_notPlayer_lists(L,player(P),Ezwischen),  
+												filter_notEmpty_lists(Ezwischen,Erg), !.
 
 %%
-filter_notEmpty_lists([_],[]).
+filter_notEmpty_lists([],[]).
 filter_notEmpty_lists([L|Ls],Erg) :- emptyList(L), filter_notEmpty_lists(Ls,Erg), !.
 filter_notEmpty_lists([L|Ls],Erg) :- Erg = [L|Erest], \+ emptyList(L), filter_notEmpty_lists(Ls,Erest).
 
 %%
-filter_notPlayer_lists([_],player(_),[]).
+filter_notPlayer_lists([],player(_),[]).
 filter_notPlayer_lists([L|Ls],player(P),Erg) :- p_in_list(L,player(P)), filter_notPlayer_lists(Ls,player(P),Erg), !.
 filter_notPlayer_lists([L|Ls],player(P),Erg) :- Erg = [L|Erest], \+ p_in_list(L,player(P)), filter_notPlayer_lists(Ls,player(P),Erest).
 
@@ -176,6 +188,13 @@ reflect([L|Ls], E) :- 	E = [E1|E2],
 invert_list([],[]).
 invert_list([L|Ls],E) :- invert_list(Ls,LsE), append(LsE, [L], E).
 										
+lowest_member([],V,V). 
+lowest_member([L|Ls],V,Erg) :- L < V,lowest_member(Ls,L,Erg), !.
+lowest_member([L|Ls],V,Erg) :- L >= V, lowest_member(Ls,V,Erg), !.
+
+hightest_member([],V,V). 
+hightest_member([L|Ls],V,Erg) :- L > V, hightest_member(Ls,L,Erg), !.
+hightest_member([L|Ls],V,Erg) :- L =< V, hightest_member(Ls,V,Erg), !.
 										
 indexOf([Elem|_],Elem,0).
 indexOf([_|Ls],Elem,Index) :- indexOf(Ls,Elem,Iink), Index is Iink+1.
