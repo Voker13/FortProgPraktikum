@@ -30,8 +30,7 @@ logic_02(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :-
 % KI kann gewinnen!
 logic_03(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :- 
 	domain(L,0,Domain),
-	select_win(Domain,state(player(P),board([L|Ls],W)),SelectedColumn),
-	direct_print_nl("...").
+	select_win(Domain,state(player(P),board([L|Ls],W)),SelectedColumn).
 	
 % gegner wird auf jeden fall gewinnen
 logic_03(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :- 
@@ -39,21 +38,19 @@ logic_03(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :-
 	\+ select_win(Domain,state(player(P),board([L|Ls],W)),_),
 	exclude_enemys_win(Domain, state(player(P),board([L|Ls],W)), BetterDomain),% nl, write(BetterDomain),
 	BetterDomain = [],
-	direct_print_nl("..."),
 	random_member(SelectedColumn,Domain).
 	
 logic_03(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :- 
 	domain(L,0,Domain),
 	\+ select_win(Domain,state(player(P),board([L|Ls],W)),_),
-	exclude_enemys_win(Domain, state(player(P),board([L|Ls],W)), BetterDomain),% nl, write(BetterDomain),
+	exclude_enemys_win(Domain, state(player(P),board([L|Ls],W)), BetterDomain),% nl, write("deny user win: "), write(BetterDomain),
 	\+ BetterDomain = [],
-	direct_print_nl("..."), 
 	bewertung_1(BetterDomain,state(player(P),board([L|Ls],W)),ErgBew1),% nl, write(ErgBew1),
 	bewertung_2(BetterDomain,state(player(P),board([L|Ls],W)),ErgBew2),% nl, write(ErgBew2),
 	add_lists_together(ErgBew1,ErgBew2,BewList),% nl, write(BewList),
-	hightest_member(BewList,0,Hightest),% nl, write(Hightest),
+	hightest_member(BewList,-100000,Hightest),% nl, write("hightest: "), write(Hightest),
 	indexOf(BewList,Hightest,IndexVList),
-	indexOf(BetterDomain,SelectedColumn,IndexVList), !. 
+	indexOf(BetterDomain,SelectedColumn,IndexVList). 
 	
 % gibt eine bewertung zu jeder column (Ds) in der Liste Erg aus 
 % // bewertung_1 kümmert sich um das füllen eigener listen
@@ -70,7 +67,7 @@ bewertung_1([D|Ds],state(player(P),Board),Erg) :-
 	all_notPlayer_WLists(NewBoard,player(Enemy),WLists2),%nl, write("L2: "), write(WLists2),nl,
 	count_P(WLists1,player(P),Count1),
 	count_P(WLists2,player(P),Count2),
-	E is (float(Count2/Len2not0)-float(Count1/Len1not0))*10, % faktor gibt die wertung gegenüber bewertung_2 an!
+	E is round((float(Count2/Len2not0)-float(Count1/Len1not0))*1000), % faktor gibt die wertung gegenüber bewertung_2 an!
 	bewertung_1(Ds,state(player(P),Board),Erest), !.
 	
 % gibt eine bewertung zu jeder column (Ds) in der Liste Erg aus 
@@ -83,7 +80,7 @@ bewertung_2([D|Ds],state(player(P),Board),Erg) :-
 	move(state(player(P),Board),D,state(player(_),NewBoard)),
 	length(WLists2,Len2),
 	all_notPlayer_WLists(NewBoard,player(P),WLists2),%nl, write("L2: "), write(WLists2),nl,
-	E is Len1-Len2,
+	E is (Len1-Len2)*100,
 	bewertung_2(Ds,state(player(P),Board),Erest), !.
 	
 % wählt ersten zug aus mit dem gewonnen werden kann
@@ -104,14 +101,14 @@ exclude_enemys_win([D|Ds], CurrentState, NewDomain) :-
 	domain(L,0,Domain),
 	swap_player(P, Enemy),
 	\+ funclvl2(Domain, state(player(Enemy),board([L|Ls],W))), % gegner kann nicht in D nächste runde gewinnen
-	exclude_enemys_win(Ds, CurrentState, NewDomainRest).
+	exclude_enemys_win(Ds, CurrentState, NewDomainRest), !.
 	
 exclude_enemys_win([D|Ds], CurrentState, NewDomain) :- 
 	move(CurrentState,D,state(player(P),board([L|Ls],W))),
 	domain(L,0,Domain),
 	swap_player(P, Enemy),
 	funclvl2(Domain, state(player(Enemy),board([L|Ls],W))), % gegner kann in D nächste runde gewinnen
-	exclude_enemys_win(Ds, CurrentState, NewDomain).
+	exclude_enemys_win(Ds, CurrentState, NewDomain), !.
 
 %% überprüft ob mit den zügen(Ds) im state(CurrentState) gewonnen werden kann
 funclvl2([D|_], CurrentState) :- move(CurrentState,D,NextState), win_board(NextState).
