@@ -3,7 +3,7 @@
 		player/1,
 		all_notPlayer_WLists/3,
 		draw_board/1,
-		win_board/1,
+		win_board/1, 
 		swap_player/2,
 		show_board/1,
 		domain/3,
@@ -12,7 +12,9 @@
 		count_P/3,
 		indexOf/3,
 		lowest_member/3,
-		hightest_member/3
+		hightest_member/3,
+		max/3,
+		add_lists_together/3
 	]).
 
 :- use_module(library(clpfd), []). 
@@ -126,18 +128,27 @@ filter_notPlayer_lists([],player(_),[]).
 filter_notPlayer_lists([L|Ls],player(P),Erg) :- p_in_list(L,player(P)), filter_notPlayer_lists(Ls,player(P),Erg), !.
 filter_notPlayer_lists([L|Ls],player(P),Erg) :- Erg = [L|Erest], \+ p_in_list(L,player(P)), filter_notPlayer_lists(Ls,player(P),Erest).
 
-%%
+%% sucht nach allen w-langen listen im board
 board_allWLists(board(Rows,W),Erg) :- 	append(E1,E2,Erg),
-										append(E_Rows,E_Cols,E1),
+										append_1_allWLists(board(Rows,W),E1),
+										append_2_allWLists(board(Rows,W),E2),
+										!.
+										
+append_1_allWLists(board(Rows,W),E1) :- append(E_Rows,E_Cols,E1), 
 										rows_allWLists(Rows,W,E_Rows),
 										clpfd:transpose(Rows,Cols), rows_allWLists(Cols,W,E_Cols),
-										append(E_DiagsRight,E_DiagsLeft,E2),
-										all_diag_right(Rows,DiagsRight), rows_allWLists(DiagsRight,W,E_DiagsRight),
-										reflect(Rows,ReflectRows), all_diag_right(ReflectRows,DiagsLeft), rows_allWLists(DiagsLeft,W,E_DiagsLeft), 
 										!.
+									
+										
+append_2_allWLists(board(Rows,W),E2) :- append(E_DiagsRight,E_DiagsLeft,E2), 
+										all_diag_right(Rows,DiagsRight), rows_allWLists(DiagsRight,W,E_DiagsRight),
+										reflect(Rows,ReflectRows), all_diag_right(ReflectRows,DiagsLeft), rows_allWLists(DiagsLeft,W,E_DiagsLeft),
+										!.
+										
 
 %%
-rows_allWLists([L],W,Erg) :- allWLists(L,W,Erg).
+%rows_allWLists([L],W,Erg) :- allWLists(L,W,Erg).
+rows_allWLists([],_,[]).
 rows_allWLists([L|Ls],W,Erg) :- append(E1,E2,Erg), allWLists(L,W,E1), rows_allWLists(Ls,W,E2), !.
 
 %gibt alle Teillisten aus, die W-lang sind, wobei die reihenfolge eingehalten wird( nicht alle Permutationen)
@@ -164,11 +175,11 @@ all_diag_right(List,E) :- 	%E = [E1|E2],
 % 0 um die diagonalen vom ersten elem. der ersten liste aus zu erreichen
 % 1 um die diagonalen vom ersten elem. der restlichen listen aus zu erreichen				
 %[[]] -> [[]]
-diag_right(List,Index,E) :- length(List,Len), Pos is Index+1, Len < Pos, E = [], !. %abbruch wenn index out of bounds
-diag_right(List,Index,E) :- E = [E1|E2],
-								diag(List,Index,E1),
+diag_right([L|_],Index,E) :- length(L,Len), Pos is Index+1, Len < Pos, E = [], !. %abbruch wenn index out of bounds
+diag_right([L|Ls],Index,E) :- E = [E1|E2],
+								diag([L|Ls],Index,E1),
 								InkIndex is Index +1,
-								diag_right(List, InkIndex,E2).
+								diag_right([L|Ls], InkIndex,E2), !.
 
 %gibt diagonale aus
 %([[]],int) -> []
@@ -195,6 +206,13 @@ lowest_member([L|Ls],V,Erg) :- L >= V, lowest_member(Ls,V,Erg), !.
 hightest_member([],V,V). 
 hightest_member([L|Ls],V,Erg) :- L > V, hightest_member(Ls,L,Erg), !.
 hightest_member([L|Ls],V,Erg) :- L =< V, hightest_member(Ls,V,Erg), !.
-										
+
+add_lists_together([],[],[]).
+add_lists_together([L1|L1s],[L2|L2s],Lerg) :- Lerg = [E1|Erest], E1 is L1+L2, add_lists_together(L1s,L2s,Erest).
+
+max(N,M,N) :- N >= M .
+max(N,M,M) :- M > N .
+					
+% liste - elem - index					
 indexOf([Elem|_],Elem,0).
 indexOf([_|Ls],Elem,Index) :- indexOf(Ls,Elem,Iink), Index is Iink+1.
