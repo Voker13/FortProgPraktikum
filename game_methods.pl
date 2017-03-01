@@ -14,6 +14,8 @@
 		lowest_member/3,
 		hightest_member/3,
 		max/3,
+		direct_print_nl/1,
+		direct_print/1,
 		add_lists_together/3
 	]).
 
@@ -210,8 +212,15 @@ hightest_member([L|Ls],V,Erg) :- L =< V, hightest_member(Ls,V,Erg), !.
 add_lists_together([],[],[]).
 add_lists_together([L1|L1s],[L2|L2s],Lerg) :- Lerg = [E1|Erest], E1 is L1+L2, add_lists_together(L1s,L2s,Erest).
 
+% returns the max value of N and M
 max(N,M,N) :- N >= M .
 max(N,M,M) :- M > N .
+
+% prints instantly the String wothout prolog resolution
+direct_print(String) :- write(String).
+
+% prints instantly the String and a next line wothout prolog resolution
+direct_print_nl(String) :- write(String), nl.
 					
 % liste - elem - index					
 indexOf([Elem|_],Elem,0).

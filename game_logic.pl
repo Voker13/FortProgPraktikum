@@ -15,6 +15,8 @@
 		domain/3,
 		win_board/1,
 		add_lists_together/3,
+		direct_print_nl/1,
+		direct_print/1,
 		count_P/3
 	]).
 	
@@ -28,7 +30,8 @@ logic_02(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :-
 % KI kann gewinnen!
 logic_03(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :- 
 	domain(L,0,Domain),
-	select_win(Domain,state(player(P),board([L|Ls],W)),SelectedColumn).%, write("I will win this game!").
+	select_win(Domain,state(player(P),board([L|Ls],W)),SelectedColumn),
+	direct_print_nl("...").
 	
 % gegner wird auf jeden fall gewinnen
 logic_03(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :- 
@@ -36,17 +39,16 @@ logic_03(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :-
 	\+ select_win(Domain,state(player(P),board([L|Ls],W)),_),
 	exclude_enemys_win(Domain, state(player(P),board([L|Ls],W)), BetterDomain),% nl, write(BetterDomain),
 	BetterDomain = [],
+	direct_print_nl("..."),
 	random_member(SelectedColumn,Domain).
 	
 logic_03(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :- 
-	write("."),
 	domain(L,0,Domain),
 	\+ select_win(Domain,state(player(P),board([L|Ls],W)),_),
 	exclude_enemys_win(Domain, state(player(P),board([L|Ls],W)), BetterDomain),% nl, write(BetterDomain),
 	\+ BetterDomain = [],
-	write("."),
+	direct_print_nl("..."), 
 	bewertung_1(BetterDomain,state(player(P),board([L|Ls],W)),ErgBew1),% nl, write(ErgBew1),
-	write("."),
 	bewertung_2(BetterDomain,state(player(P),board([L|Ls],W)),ErgBew2),% nl, write(ErgBew2),
 	add_lists_together(ErgBew1,ErgBew2,BewList),% nl, write(BewList),
 	hightest_member(BewList,0,Hightest),% nl, write(Hightest),

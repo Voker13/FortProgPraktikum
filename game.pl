@@ -9,6 +9,7 @@
 		move/3,
 		max/3,
 		new_empty_board/3,
+		direct_print/1,
 		indexOf/3
 	]).
 	
@@ -58,17 +59,18 @@ turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols)) :-
 						show_board(board([L|Ls],W)),
 						read(Column),
 						integer(Column),
-						indexOf(Dom,Column,_),
+						indexOf(Dom,Column,_), 
 						move(state(player(P),board([L|Ls],W)),Column,state(player(P),NewBoard)),																		
 						evaluation(game(state(player(P),NewBoard),Human,Rows,Cols)).
 	
-% KI turn - not won										 									
+% KI turn - not won										 								
 turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols)) :-	
 						player(P) \= player(Human),
 						write("It's KIs turn!"),nl,	
 						show_board(board([L|Ls],W)),
-						write("KI is working"), 
+						direct_print("KI is thinking"), 
 						logic(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols),SelectedCol),  
 						write("The KI set in Column "), write(SelectedCol), write("."),nl,
 						move(state(player(P),board([L|Ls],W)),SelectedCol,state(player(P),NewBoard)),																	
 						evaluation(game(state(player(P),NewBoard),Human,Rows,Cols)).
+						
