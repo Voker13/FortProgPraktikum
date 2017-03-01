@@ -56,7 +56,7 @@ logic_03(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :-
 % // bewertung_1 kümmert sich um das füllen eigener listen
 bewertung_1([],_,[]).
 bewertung_1([D|Ds],state(player(P),Board),Erg) :-
-	Erg = [E|Erest],
+	Erg = [E|Erest], 
 	swap_player(P,Enemy),
 	length(WLists1,Len1),
 	zero_to_one(Len1,Len1not0),
