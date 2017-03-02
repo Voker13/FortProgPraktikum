@@ -64,7 +64,7 @@ turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols)) :-
 						evaluation(game(state(player(P),NewBoard),Human,Rows,Cols)).
 	
 % KI turn - not won										 								
-turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols)) :-	
+turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols)) :-	 
 						player(P) \= player(Human),
 						write("It's KIs turn!"),nl,	
 						show_board(board([L|Ls],W)),
