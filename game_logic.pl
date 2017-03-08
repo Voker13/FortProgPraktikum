@@ -2,7 +2,8 @@
 		random_logic/2,
 		logic_01/2,
 		logic_02/2,
-		logic_03/2
+		logic_03/2,
+		logic_tree/2
 	]).
 
 :- use_module(game_methods, [
@@ -10,15 +11,85 @@
 		swap_player/2,
 		move/3,
 		indexOf/3,
-		lowest_member/3,
-		hightest_member/3,
+		lowest_member/2, 
+		hightest_member/2,
 		domain/3,
 		win_board/1,
 		add_lists_together/3,
 		direct_print_nl/1,
 		direct_print/1,
+		show_board/1,
+		max/3,
+		min/3,
 		count_P/3
 	]).
+	
+% logic_tree(tiefe,state,Zug,Bewertung)
+logic_tree(game(state(P,board([L|Ls],W)),_,_,_),SelectedColumn) :-
+	Tiefe is 1,
+	domain(L,0,Domain),
+	start_tree(Tiefe,Domain,state(P,board([L|Ls],W)),BewList),% write(BewList), nl,
+	hightest_member(BewList,Hightest),
+	indexOf(BewList,Hightest,Index),
+	indexOf(Domain,SelectedColumn,Index),
+	!. % wenn kein cut, dann gibt er noch andere mögliche züge aus, wenn gleiche wertung
+	
+start_tree(_,[],_,[]).
+start_tree(Tiefe,[D|Ds],State,BewList) :-
+	BewList = [Wert|RestWerte],
+	%write("D: "),write(D),nl,
+	own_node(Tiefe,[D],State,Wert),
+	%write("Wert: "),write(Wert),nl,
+	start_tree(Tiefe,Ds,State,RestWerte), 
+	!. 
+	
+own_node(_,[],_,-100000) :- !. % keine weiteren fälle in dieser Tiefe <<<<<-------- darf bei max nicht rauskommen
+own_node(0,[D|Ds],State,Bewertung) :- % Tiefe erreicht und kein sieg --> heuristik greift für kinder
+	\+ select_win([D],State,_),
+	write("own_node     >>> Tiefe: "), write(0),write(", Column: "),write(D),write(" -- depth reached -- heuristik -- return 0 -- "),write(State),nl,
+	own_node(0,Ds,State,WertRest),
+	max(0,WertRest,Bewertung).  % VORERST HIER >>> 0 <<<
+own_node(Tiefe,[D|Ds],State,Bewertung) :- % fall dass man gewinnt
+	select_win([D],State,_),
+	write("own_node     >>> Tiefe: "), write(Tiefe),write(", Column: "),write(D),write(" -- win -- "),write(State),nl,
+	own_node(Tiefe,Ds,State,WertRest),
+	max(1,WertRest,Bewertung),
+	!.  % <-- wertsteigerung bei einem möglichen Sieg (Bewertung = 1 + WertRest)
+own_node(Tiefe,[D|Ds],State,Bewertung) :- % kein sieg und tiefe noch nicht erreicht
+	Tiefe > 0,
+	\+ select_win([D],State,_),
+	write("own_node     >>> Tiefe: "), write(Tiefe),write(", Column: "),write(D),write(" -- no win -- not deep enought -- "),write(State),nl,
+	move(State,D,state(player(P),board([L|Ls],W))),
+	domain(L,0,EnemyDomain),
+	write("1"),nl,
+	enemy_node(Tiefe,EnemyDomain,state(player(P),board([L|Ls],W)),Wert),  %  <<<--- bleibt hier stecken -.- 
+	write("2"),nl,
+	own_node(Tiefe,Ds,State,WertRest),
+	write("3"),nl,
+	max(Wert,WertRest,Bewertung), 
+	write(Bewertung),nl,
+	!.
+	
+enemy_node(_,[],_,100000) :- !. % keine weiteren fälle in dieser Tiefe
+enemy_node(Tiefe,[D|Ds],state(player(P),Board),Bewertung) :- % gegner kann gewinnen --> zu muss schlecht bewertet werden
+	swap_player(P,Enemy),
+	select_win([D],state(player(Enemy),Board),_),
+	write("enemy_node >>> Tiefe: "), write(Tiefe),write(", Column: "),write(D),write(" -- enemy can win -- "),write(state(player(P),Board)),nl,
+	enemy_node(Tiefe,Ds,state(player(P),Board),WertRest),
+	min(-1,WertRest,Bewertung), 
+	!.
+enemy_node(Tiefe,[D|Ds],state(player(P),Board),Bewertung) :- % gegner kann nicht gewinnen --> bekommt wert von kinder nodes <-- own_node (Wert)
+	swap_player(P,Enemy),
+	\+ select_win([D],state(player(Enemy),Board),_),
+	write("enemy_node >>> Tiefe: "), write(Tiefe),write(", Column: "),write(D),write(" -- enemy cannot win -- "),write(state(player(P),Board)),nl,
+	move(state(player(Enemy),Board),D,state(_,board([L|Ls],W))),
+	DecTiefe is Tiefe-1, 
+	domain(L,0,NewDomain),
+	own_node(DecTiefe,NewDomain,state(player(P),board([L|Ls],W)),Wert),
+	enemy_node(Tiefe,Ds,state(player(P),Board),WertRest),
+	min(Wert,WertRest,Bewertung),
+	!.
+	
 	
 % gibt einen zufälligen gültigen zug zurück
 random_logic(game(state(_,board([L|_],_)),_,_,_),SelectedColumn) :- domain(L,0,Dom), random_member(SelectedColumn,Dom).
@@ -34,7 +105,7 @@ logic_02(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :-
 logic_03(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :- 
 	domain(L,0,Domain),
 	select_win(Domain,state(player(P),board([L|Ls],W)),SelectedColumn).
-	
+
 % gegner wird auf jeden fall gewinnen
 % SaveDomain ist leer, es gibt keinen zug der den sieg des gegners verhindern könnte
 % also setzt er random irgendwo hin
@@ -57,7 +128,7 @@ logic_03(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :-
 	bewertung_1(SaveDomain,state(player(P),board([L|Ls],W)),ErgBew1),% nl, write(ErgBew1),
 	bewertung_2(SaveDomain,state(player(P),board([L|Ls],W)),ErgBew2),% nl, write(ErgBew2),
 	add_lists_together(ErgBew1,ErgBew2,BewList),% nl, write(BewList),
-	hightest_member(BewList,-100000,Hightest),% nl, write("hightest: "), write(Hightest),
+	hightest_member(BewList,Hightest),% nl, write("hightest: "), write(Hightest),
 	indexOf(BewList,Hightest,IndexVList),
 	indexOf(SaveDomain,SelectedColumn,IndexVList). 
 	
@@ -137,7 +208,7 @@ logic_01(game(state(player(P),board([L|Ls],W)),_,_,_),SelectedColumn) :-
 	domain(L,0,Domain),
 	swap_player(P,Enemy),% write(Dimension),
 	iter1(Domain, P, Enemy, state(player(P),board([L|Ls],W)), ValueList), nl, write(ValueList),
-	lowest_member(ValueList,100000,Lowest),
+	lowest_member(ValueList,Lowest),
 	indexOf(ValueList,Lowest,IndexVList),
 	indexOf(Domain,SelectedColumn,IndexVList), !. 
 	

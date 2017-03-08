@@ -11,15 +11,16 @@
 		new_empty_board/3,
 		count_P/3,
 		indexOf/3,
-		lowest_member/3,
-		hightest_member/3,
+		lowest_member/2,
+		hightest_member/2,
 		max/3,
+		min/3,
 		direct_print_nl/1,
 		direct_print/1,
 		add_lists_together/3
 	]).
 
-:- use_module(library(clpfd), []). 
+:- use_module(library(clpfd), []).  
 
 empty(' '). % unser symbol für 'leer'
 player(x). % spieler 'x'
@@ -34,15 +35,23 @@ new_x_list(0,_,[]) :- !.
 new_x_list(Length,X,L) :- L = [X|L2], DecLength is Length-1, new_x_list(DecLength,X,L2).
 
 % setzt in im ersten board in spalte column einen stein des players P und gibt das neue board mit player P zurück
-move(state(player(P),board([L|Ls],W)),Column,state(player(P),board(NewBoard,W))) :-  
-													move_possible(L),
-													length(L,Len), 
-													Len > Column,
-													Column >= 0,
+move(state(player(P),board([L|Ls],W)),Column,state(player(P),board([N|Ns],W))) :-  
+													%write("test0"),nl,
+													domain(L,0,Domain),
+													%write(Domain),nl,
+													%\+ Domain == [],
+													%write("Test1"),nl,
+													indexOf(Domain,Column,_),
+													%write("Test2"),nl,
+													%move_possible(L), 
+													%length(L,Len), 
+													%Len > Column,
+													%Column >= 0,
 													get_current_row([L|Ls],Column,SelectedRow),
 													index_of_last([L|Ls],SelectedRow,RowIndex),
 													swap(SelectedRow,P,Column,NewRow),
-													swap([L|Ls],NewRow,RowIndex,NewBoard).
+													swap([L|Ls],NewRow,RowIndex,[N|Ns]), 
+													!.
 
 % gibt, anders als indexOf, den index vom letzten passenden 'elem' zurück
 index_of_last(List,Elem,Index) :- length(List,Length), invert_list(List,InvertList), indexOf(InvertList,Elem,InvertIndex), Index is Length-InvertIndex-1, !.
@@ -54,8 +63,9 @@ index_of_last(List,Elem,Index) :- length(List,Length), invert_list(List,InvertLi
 %last1([], _, _, Acc, Acc).
 %last1([L| Ls], Elem, Index, Acc, R) :- IncIndex is Index + 1, (L == Elem, !, last1(Ls, Elem, IncIndex, Index, R); last1(Ls, Elem, IncIndex, Acc, R)).
 
+
 % gibt die indizes der liste in einer liste zurück
-domain([],_,[]).
+domain([],_,[]). 
 domain([L|Ls],X,Lr) :-  \+empty(L), IncX is X+1, domain(Ls,IncX,Lr).
 domain([L|Ls],X,Li) :-  empty(L), Li = [X|Lr], IncX is X+1, domain(Ls,IncX,Lr).
 
@@ -83,6 +93,9 @@ empty_board(board([R|Rs],_)) :- emptyList(R), empty_board(board(Rs,_)).
 % gibt an ob eine liste leer ist.
 emptyList([X]) :- empty(X).
 emptyList([R|Rs]) :- empty(R), emptyList(Rs).
+
+% incrementiert ein elem
+increment(I,IncI) :- IncI is I+1.
 
 % wendet count_p_in_list auf das board an.. summiert alle ergebnisse zu Erg
 count_P([],player(_),0).
@@ -226,23 +239,29 @@ reflect([L|Ls], E) :- 	E = [E1|E2],
 invert_list([],[]).
 invert_list([L|Ls],E) :- invert_list(Ls,LsE), append(LsE, [L], E).
 
-% gibt das kleinste elem der liste zurück										
-lowest_member([],V,V). 
-lowest_member([L|Ls],V,Erg) :- L < V,lowest_member(Ls,L,Erg), !.
-lowest_member([L|Ls],V,Erg) :- L >= V, lowest_member(Ls,V,Erg), !.
+% gibt das kleinste elem der liste zurück	
+lowest_member(L,Erg) :- lowest_member2(L,1000000,Erg), !.									
+lowest_member2([],V,V). 
+lowest_member2([L|Ls],V,Erg) :- L < V,lowest_member2(Ls,L,Erg), !.
+lowest_member2([L|Ls],V,Erg) :- L >= V, lowest_member2(Ls,V,Erg), !.
 
 %gibt das größte elem der liste zurück
-hightest_member([],V,V). 
-hightest_member([L|Ls],V,Erg) :- L > V, hightest_member(Ls,L,Erg), !.
-hightest_member([L|Ls],V,Erg) :- L =< V, hightest_member(Ls,V,Erg), !.
+hightest_member(L,Erg) :- hightest_member2(L,-1000000,Erg), !.
+hightest_member2([],V,V). 
+hightest_member2([L|Ls],V,Erg) :- L > V, hightest_member2(Ls,L,Erg), !.
+hightest_member2([L|Ls],V,Erg) :- L =< V, hightest_member2(Ls,V,Erg), !.
 
 % nimmt 2 listen und addiert L1(i) und L2(i) in ein weitere liste
 add_lists_together([],[],[]).
 add_lists_together([L1|L1s],[L2|L2s],Lerg) :- Lerg = [E1|Erest], E1 is L1+L2, add_lists_together(L1s,L2s,Erest).
 
-% returns the max value of N and M
-max(N,M,N) :- N >= M .
-max(N,M,M) :- M > N .
+% returns the max value of N and M 
+max(N,M,N) :- N >= M ,!.
+max(N,M,M) :- M > N ,!.
+
+% returns the min value of N and M
+min(N,M,N) :- N =< M ,!.
+min(N,M,M) :- M > N ,!.
 
 % prints instantly the String wothout prolog resolution
 direct_print(String) :- write(String).
