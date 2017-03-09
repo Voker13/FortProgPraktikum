@@ -28,7 +28,7 @@
 logic_tree(game(state(P,board([L|Ls],W)),_,_,_),SelectedColumn) :-
 	Tiefe is 1,
 	domain(L,0,Domain),
-	start_tree(Tiefe,Domain,state(P,board([L|Ls],W)),BewList),% write(BewList), nl,
+	start_tree(Tiefe,Domain,state(P,board([L|Ls],W)),BewList), write("Bewertung: "), write(BewList), nl,
 	hightest_member(BewList,Hightest),
 	indexOf(BewList,Hightest,Index),
 	indexOf(Domain,SelectedColumn,Index),
@@ -46,42 +46,48 @@ start_tree(Tiefe,[D|Ds],State,BewList) :-
 own_node(_,[],_,-100000) :- !. % keine weiteren fälle in dieser Tiefe <<<<<-------- darf bei max nicht rauskommen
 own_node(0,[D|Ds],State,Bewertung) :- % Tiefe erreicht und kein sieg --> heuristik greift für kinder
 	\+ select_win([D],State,_),
-	write("own_node     >>> Tiefe: "), write(0),write(", Column: "),write(D),write(" -- depth reached -- heuristik -- return 0 -- "),write(State),nl,
+	%write("own_node     >>> Tiefe: "), write(0),write(", Column: "),write(D),write(" -- depth reached -- heuristik -- return 0 -- "),write(State),nl,
+	move(State,D,state(player(P),board([L|Ls],W))),
+	domain(L,0,NewDomain),
+	swap_player(P,Enemy),
+	bewertung_1(NewDomain,state(player(Enemy),board([L|Ls],W)),BewList1),
+	bewertung_2(NewDomain,state(player(Enemy),board([L|Ls],W)),BewList2),
+	add_lists_together(BewList1,BewList2,BewListUnited),
+	hightest_member(BewListUnited,Lowest),  % nimmt den besten zu für den gegner 
+	Wert is Lowest*(-1),              % da aber hier grade "mini" ist muss der wert negiert werden --> also hat er den min zug gewählt
+	%write("Wert: "), write(Wert), write("; BewList1: "), write(BewList1), write("; BewList2: "), write(BewList2), write("; BewListUnited: "), write(BewListUnited), nl,
 	own_node(0,Ds,State,WertRest),
-	max(0,WertRest,Bewertung).  % VORERST HIER >>> 0 <<<
+	max(Wert,WertRest,Bewertung),
+	!.  % VORERST HIER >>> 0 <<<
 own_node(Tiefe,[D|Ds],State,Bewertung) :- % fall dass man gewinnt
 	select_win([D],State,_),
-	write("own_node     >>> Tiefe: "), write(Tiefe),write(", Column: "),write(D),write(" -- win -- "),write(State),nl,
+	%write("own_node     >>> Tiefe: "), write(Tiefe),write(", Column: "),write(D),write(" -- win -- "),write(State),nl,
 	own_node(Tiefe,Ds,State,WertRest),
-	max(1,WertRest,Bewertung),
+	max(1000,WertRest,Bewertung),
 	!.  % <-- wertsteigerung bei einem möglichen Sieg (Bewertung = 1 + WertRest)
 own_node(Tiefe,[D|Ds],State,Bewertung) :- % kein sieg und tiefe noch nicht erreicht
 	Tiefe > 0,
 	\+ select_win([D],State,_),
-	write("own_node     >>> Tiefe: "), write(Tiefe),write(", Column: "),write(D),write(" -- no win -- not deep enought -- "),write(State),nl,
+	%write("own_node     >>> Tiefe: "), write(Tiefe),write(", Column: "),write(D),write(" -- no win -- not deep enought -- "),write(State),nl,
 	move(State,D,state(player(P),board([L|Ls],W))),
 	domain(L,0,EnemyDomain),
-	write("1"),nl,
 	enemy_node(Tiefe,EnemyDomain,state(player(P),board([L|Ls],W)),Wert),  %  <<<--- bleibt hier stecken -.- 
-	write("2"),nl,
 	own_node(Tiefe,Ds,State,WertRest),
-	write("3"),nl,
-	max(Wert,WertRest,Bewertung), 
-	write(Bewertung),nl,
+	max(Wert,WertRest,Bewertung),
 	!.
 	
 enemy_node(_,[],_,100000) :- !. % keine weiteren fälle in dieser Tiefe
 enemy_node(Tiefe,[D|Ds],state(player(P),Board),Bewertung) :- % gegner kann gewinnen --> zu muss schlecht bewertet werden
 	swap_player(P,Enemy),
 	select_win([D],state(player(Enemy),Board),_),
-	write("enemy_node >>> Tiefe: "), write(Tiefe),write(", Column: "),write(D),write(" -- enemy can win -- "),write(state(player(P),Board)),nl,
+	%write("enemy_node >>> Tiefe: "), write(Tiefe),write(", Column: "),write(D),write(" -- enemy can win -- "),write(state(player(P),Board)),nl,
 	enemy_node(Tiefe,Ds,state(player(P),Board),WertRest),
-	min(-1,WertRest,Bewertung), 
+	min(-1000,WertRest,Bewertung), 
 	!.
 enemy_node(Tiefe,[D|Ds],state(player(P),Board),Bewertung) :- % gegner kann nicht gewinnen --> bekommt wert von kinder nodes <-- own_node (Wert)
 	swap_player(P,Enemy),
 	\+ select_win([D],state(player(Enemy),Board),_),
-	write("enemy_node >>> Tiefe: "), write(Tiefe),write(", Column: "),write(D),write(" -- enemy cannot win -- "),write(state(player(P),Board)),nl,
+	%write("enemy_node >>> Tiefe: "), write(Tiefe),write(", Column: "),write(D),write(" -- enemy cannot win -- "),write(state(player(P),Board)),nl,
 	move(state(player(Enemy),Board),D,state(_,board([L|Ls],W))),
 	DecTiefe is Tiefe-1, 
 	domain(L,0,NewDomain),
@@ -150,7 +156,7 @@ bewertung_1([D|Ds],state(player(P),Board),Erg) :-
 	all_notPlayer_WLists(NewBoard,player(Enemy),WLists2),%nl, write("L2: "), write(WLists2),nl,
 	count_P(WLists1,player(P),Count1),
 	count_P(WLists2,player(P),Count2),
-	E is round((float(Count2/Len2not0)-float(Count1/Len1not0))*1000), % faktor gibt die wertung gegenüber bewertung_2 /100 an!
+	E is round((float(Count2/Len2not0)-float(Count1/Len1not0))*100), % faktor gibt die wertung gegenüber bewertung_2 /100 an!
 	bewertung_1(Ds,state(player(P),Board),Erest), !.
 	
 % gibt eine bewertung zu jeder column (Ds) in der Liste Erg aus 

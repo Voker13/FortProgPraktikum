@@ -13,6 +13,8 @@
 		indexOf/3
 	]).
 	
+:- use_module(library(lists)).
+
 :- use_module(game_logic, [
 		random_logic/2,
 		logic_01/2, 
@@ -25,14 +27,19 @@
 % startet das Spiel in der Konsole, Benutzereingaben bestimmen die Dimension des Spielfelds,
 % die Anzahl der Steine in einer Reihe f�r den Gewinn und das Symbol des Spielers
 % Spieler x beginnt 
-start() :- 	write("How many Rows the field should have:"),read(Rows),
-			write("How many Columns the field should have:"),read(Cols),
+start() :- 	write("How many Rows the field should have:"), read_int_pos(Rows),% read(Rows), integer(Rows),
+			write("How many Columns the field should have:"),read_int_pos(Cols), 
 			max(Rows,Cols,Max),
-			write("Streak to Win between 1 - "), write(Max), write("!"), read(W),
-			write("Choose 'x' or 'o' ('x' starts):"),read(Human),
+			write("Streak to Win between 1 - "), write(Max), write("!"), read_int_pos_max(Max,W),
+			write("Choose 'x' or 'o' ('x' starts):"),read_human(Human),
 			new_empty_board(Cols,Rows,NewBoard), 
-			turn(game(state(player(x),board(NewBoard,W)),Human,Rows,Cols)).
+			turn(game(state(player(x),board(NewBoard,W)),Human,Rows,Cols)). 
 			
+% die folgenden 4 terms prüfen die user-eingaben auf richtige inputs
+read_int_pos(X) :- read(X), integer(X), X > 0, !; write("Wong input! You have to enter a Integer > 0!"), read_int_pos(X).
+read_int_pos_max(Max,X) :- read(X), integer(X), X > 0, X =< Max, !; write("Wong input! You have to enter a Integer > 0 and <= "), write(Max), write("!"), read_int_pos_max(Max,X).
+read_human(X) :- read(X), player(X), !; write("Wrong Input! Enter 'x' or 'o'!"), read_human(X).
+read_int_domain(X,Domain) :- read(X), member(X,Domain), !; write("Wrong input! Choose on of these: "), write(Domain), read_int_domain(X,Domain).
 
 % der Zug des Spielers:
 % es wird das aktuelle Board ausgegeben und der Spieler wird aufgefordert, einen
@@ -41,12 +48,12 @@ start() :- 	write("How many Rows the field should have:"),read(Rows),
 % oder Unentschieden gecheckt
 turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols)) :-
 						player(P) = player(Human),
-						domain(L,0,Dom),
-						write("It's your turn - choose wisely!"),nl,write(Dom),nl,%write(")!"),nl,
+						domain(L,0,Domain),
+						write("It's your turn - choose wisely!"),nl,write(Domain),nl,%write(")!"),nl,
 						show_board(board([L|Ls],W)), 
-						read(Column),
-						integer(Column),
-						indexOf(Dom,Column,_), 
+						read_int_domain(Column,Domain),
+						%integer(Column),
+						%indexOf(Dom,Column,_), 
 						move(state(player(P),board([L|Ls],W)),Column,state(player(P),NewBoard)),																		
 						evaluation(game(state(player(P),NewBoard),Human,Rows,Cols)).
 	
@@ -57,7 +64,7 @@ turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols)) :-
 turn(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols)) :-	 
 						player(P) \= player(Human),
 						write("It's KIs turn!"),nl,	
-						show_board(board([L|Ls],W)),
+						show_board(board([L|Ls],W)),  
 						direct_print_nl("KI is thinking..."), 
 						logic(game(state(player(P),board([L|Ls],W)),Human,Rows,Cols),SelectedCol),  
 						write("The KI set in Column "), write(SelectedCol), write("."),nl,

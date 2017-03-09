@@ -261,7 +261,7 @@ max(N,M,M) :- M > N ,!.
 
 % returns the min value of N and M
 min(N,M,N) :- N =< M ,!.
-min(N,M,M) :- M > N ,!.
+min(N,M,M) :- M < N ,!.
 
 % prints instantly the String wothout prolog resolution
 direct_print(String) :- write(String).
